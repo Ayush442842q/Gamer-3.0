@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Candy Crush Saga - Sweet Arcade Puzzle</title>
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Play Candy Crush Saga directly in your browser. Match candies, activate powerful boosters, enjoy neon styling, synthesized audio, and compete on the leaderboard!">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet">
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-classic">
+  <!-- Sound Effects/Audio Handler -->
+  <script src="audio.js"></script>
+
+  <!-- Background decorations for visual depth -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <h1 class="logo" id="app-title">CANDY <span class="logo-accent">CRUSH</span> <span class="logo-sub">SAGA</span></h1>
+    </header>
+
+    <!-- Main Game Section -->
+    <main class="game-layout">
+      <!-- Sidebar Info/Stats Panel -->
+      <section class="panel stats-panel" aria-labelledby="stats-heading">
+        <h2 id="stats-heading" class="sr-only">Game Statistics</h2>
+        
+        <div class="stat-card level-card">
+          <span class="label">LEVEL</span>
+          <span id="level-value" class="value">1</span>
+        </div>
+
+        <div class="stat-card moves-card">
+          <span class="label">MOVES LEFT</span>
+          <div class="moves-circle">
+            <span id="moves-value" class="value">30</span>
+          </div>
+        </div>
+
+        <div class="stat-card score-card">
+          <span class="label">SCORE</span>
+          <span id="score-value" class="value">0000</span>
+          <div class="target-container">
+            <span>Target: </span>
+            <span id="target-value">1500</span>
+          </div>
+          <!-- Progress Bar -->
+          <div class="progress-bar-container" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="score-progress-bar">
+            <div id="score-progress" class="progress-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div class="stat-card highscore-card">
+          <span class="label">BEST SCORE</span>
+          <span id="highscore-value" class="value">0000</span>
+        </div>
+      </section>
+
+      <!-- Central Game Board -->
+      <section class="board-wrapper">
+        <div class="board-glass">
+          <div id="game-board" class="game-board" aria-label="Candy crush game board grid"></div>
+        </div>
+      </section>
+
+      <!-- Sidebar Controls & Boosters -->
+      <section class="panel controls-panel" aria-labelledby="controls-heading">
+        <h2 id="controls-heading" class="sr-only">Boosters and Controls</h2>
+
+        <!-- Boosters Area -->
+        <div class="control-group boosters-group">
+          <h3>BOOSTERS</h3>
+          <div class="boosters-row">
+            <button id="booster-hammer" class="booster-btn" title="Lollipop Hammer: Break one candy" aria-label="Use Lollipop Hammer booster">
+              <span class="booster-icon">🔨</span>
+              <span class="booster-label">Hammer</span>
+              <span id="hammer-count" class="booster-count">1</span>
+            </button>
+            <button id="booster-color" class="booster-btn" title="Color Bomb: Spawn a color bomb candy" aria-label="Use Color Bomb booster">
+              <span class="booster-icon">💣</span>
+              <span class="booster-label">Bomb</span>
+              <span id="color-count" class="booster-count">1</span>
+            </button>
+            <button id="booster-shuffle" class="booster-btn" title="Shuffle: Shuffle the board layout" aria-label="Use Shuffle board booster">
+              <span class="booster-icon">🔄</span>
+              <span class="booster-label">Shuffle</span>
+              <span id="shuffle-count" class="booster-count">1</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Customizations and System Toggles -->
+        <div class="control-group config-group">
+          <h3>SETTINGS</h3>
+          <div class="config-controls">
+            <!-- Theme Selector -->
+            <div class="setting-item">
+              <label for="theme-select">Theme:</label>
+              <select id="theme-select" class="custom-select">
+                <option value="classic">Sweet Classic</option>
+                <option value="cyberpunk">Cyberpunk Neon</option>
+                <option value="undersea">Ocean Sparkle</option>
+              </select>
+            </div>
+            <!-- Audio Toggle -->
+            <div class="setting-item">
+              <span>Sound:</span>
+              <button id="sound-toggle" class="toggle-btn active" aria-label="Toggle sound effects">
+                <span id="sound-status-icon">🔊</span> On
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <button id="rules-btn" class="secondary-btn" aria-label="View how to play rules">How To Play</button>
+        <button id="leaderboard-btn" class="secondary-btn" aria-label="View High Scores Leaderboard">Leaderboard</button>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODALS -->
+
+  <!-- 1. Rules/Tutorial Modal (Active on start) -->
+  <div id="modal-rules" class="modal active" role="dialog" aria-modal="true" aria-labelledby="modal-rules-title">
+    <div class="modal-content">
+      <h2 id="modal-rules-title" class="modal-title">Welcome to Candy Crush!</h2>
+      <div class="modal-body">
+        <p class="intro">Swipe or click adjacent candies to match 3 or more of the same color. Clear them to reach the level target score before running out of moves!</p>
+        <div class="guide-cards">
+          <div class="guide-card">
+            <span class="guide-num">3</span>
+            <p><strong>Match 3:</strong> Clears the candies and adds to your score.</p>
+          </div>
+          <div class="guide-card">
+            <span class="guide-num">4</span>
+            <p><strong>Match 4:</strong> Creates a <span class="text-striped">Striped Candy</span>. Matching it clears a whole row or column!</p>
+          </div>
+          <div class="guide-card">
+            <span class="guide-num">5</span>
+            <p><strong>Match 5:</strong> Creates a <span class="text-bomb">Color Bomb</span>. Swap it with any candy to clear all candies of that color!</p>
+          </div>
+        </div>
+        <div class="boosters-info">
+          <p><strong>Use Boosters</strong> if you get stuck: Lollipop Hammer (destroys 1 candy), Color Bomb placement, or Shuffle Board!</p>
+        </div>
+      </div>
+      <button id="close-rules-btn" class="primary-btn">PLAY NOW</button>
+    </div>
+  </div>
+
+  <!-- 2. Level Up Modal -->
+  <div id="modal-level-up" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-lvlup-title">
+    <div class="modal-content success-modal animate-pop">
+      <div class="modal-header-graphic">✨ LEVEL COMPLETED ✨</div>
+      <h2 id="modal-lvlup-title" class="modal-title font-playfair">Fantastic!</h2>
+      <div class="modal-body">
+        <p>You smashed the targets and advanced to the next level!</p>
+        <div class="score-summary">
+          <div class="summary-item">
+            <span>Score Achieved:</span>
+            <span id="lvlup-score" class="accent-value">2,450</span>
+          </div>
+          <div class="summary-item">
+            <span>Moves Remaining:</span>
+            <span id="lvlup-moves" class="accent-value">12</span>
+          </div>
+        </div>
+      </div>
+      <button id="next-level-btn" class="primary-btn pulse-anim">NEXT LEVEL</button>
+    </div>
+  </div>
+
+  <!-- 3. Game Over Modal -->
+  <div id="modal-game-over" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-gameover-title">
+    <div class="modal-content danger-modal">
+      <div class="modal-header-graphic">💔 OUT OF MOVES 💔</div>
+      <h2 id="modal-gameover-title" class="modal-title font-playfair">Game Over</h2>
+      <div class="modal-body">
+        <p>You couldn't reach the target score of <span id="gameover-target-display">1500</span> in time.</p>
+        <div class="score-summary">
+          <div class="summary-item">
+            <span>Your Score:</span>
+            <span id="gameover-score" class="accent-value">1,120</span>
+          </div>
+        </div>
+        <div class="leaderboard-submit">
+          <label for="player-name">Submit to Leaderboard:</label>
+          <div class="submit-row">
+            <input type="text" id="player-name" placeholder="Enter Name" maxlength="10">
+            <button id="submit-score-btn" class="accent-btn">Submit</button>
+          </div>
+        </div>
+      </div>
+      <button id="restart-game-btn" class="primary-btn">TRY AGAIN</button>
+    </div>
+  </div>
+
+  <!-- 4. Leaderboard Modal -->
+  <div id="modal-leaderboard" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-lead-title">
+    <div class="modal-content">
+      <h2 id="modal-lead-title" class="modal-title">High Scores Leaderboard</h2>
+      <div class="modal-body">
+        <table class="leaderboard-table">
+          <thead>
+            <tr>
+              <th scope="col">Rank</th>
+              <th scope="col">Player</th>
+              <th scope="col">Level</th>
+              <th scope="col">Score</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+      <button id="close-leaderboard-btn" class="primary-btn">CLOSE</button>
+    </div>
+  </div>
+
+  <!-- Core Game Script -->
+  <script src="game.js"></script>
+</body>
+</html>
