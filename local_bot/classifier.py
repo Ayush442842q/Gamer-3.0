@@ -51,45 +51,79 @@ def load_templates():
     TEMPLATES_LOADED = True
     print(f"[*] Templates loaded: {len(TEMPLATES)} templates registered.")
 
+def classify_cell_hsv(cell_img: np.ndarray) -> int:
+    """
+    Classifies a cell candy type using HSV color ranges.
+    Requires no templates, serving as an immediate fallback.
+    """
+    h, w, _ = cell_img.shape
+    # Crop the center 35% of the cell to isolate the candy and ignore background grids
+    cy1, cy2 = int(h * 0.325), int(h * 0.675)
+    cx1, cx2 = int(w * 0.325), int(w * 0.675)
+    center = cell_img[cy1:cy2, cx1:cx2]
+    
+    hsv = cv2.cvtColor(center, cv2.COLOR_BGR2HSV)
+    
+    avg_h = np.mean(hsv[:, :, 0])
+    avg_s = np.mean(hsv[:, :, 1])
+    avg_v = np.mean(hsv[:, :, 2])
+    
+    # Low saturation or low brightness means empty background grid
+    if avg_s < 50 or avg_v < 55:
+        return 0
+        
+    # Hue ranges (0-180 in OpenCV) mapped to Candy Crush standard colors:
+    # 1: Red, 2: Orange, 3: Yellow, 4: Green, 5: Blue, 6: Purple
+    if avg_h < 8 or avg_h > 172:
+        return 1  # Red
+    elif 8 <= avg_h < 22:
+        return 2  # Orange
+    elif 22 <= avg_h < 38:
+        return 3  # Yellow
+    elif 38 <= avg_h < 85:
+        return 4  # Green
+    elif 85 <= avg_h < 130:
+        return 5  # Blue
+    elif 130 <= avg_h <= 172:
+        return 6  # Purple
+        
+    return 0
+
 def classify_cell(cell_img: np.ndarray) -> int:
     """
     Compares a cell image against all loaded candy templates.
     Returns the candy ID with the highest matching confidence.
-    Falls back to 0 (empty) if no template exceeds the confidence threshold.
+    Falls back to HSV color-based classification if no templates are loaded
+    or if the template match confidence is too low.
     """
     load_templates()
     
-    if not TEMPLATES:
-        # If no templates exist yet (calibration phase), classify as empty/unknown
-        return 0
-        
     best_id = 0
     best_score = -1.0
     
     cell_h, cell_w, _ = cell_img.shape
-    
-    # Optional: crop the center 70% of the cell to ignore grid borders and backgrounds
     cy1, cy2 = int(cell_h * 0.15), int(cell_h * 0.85)
     cx1, cx2 = int(cell_w * 0.15), int(cell_w * 0.85)
     cell_crop = cell_img[cy1:cy2, cx1:cx2]
     crop_h, crop_w, _ = cell_crop.shape
     
-    for candy_id, template in TEMPLATES.items():
-        # Resize template to match cell crop dimensions
-        t_resized = cv2.resize(template, (crop_w, crop_h))
-        
-        result = cv2.matchTemplate(cell_crop, t_resized, cv2.TM_CCOEFF_NORMED)
-        _, max_val, _, _ = cv2.minMaxLoc(result)
-        
-        if max_val > best_score:
-            best_score = max_val
-            best_id = candy_id
+    if TEMPLATES:
+        for candy_id, template in TEMPLATES.items():
+            # Resize template to match cell crop dimensions
+            t_resized = cv2.resize(template, (crop_w, crop_h))
             
-    if best_score >= config.TEMPLATE_MATCH_THRESHOLD:
-        return best_id
-    else:
-        # Match confidence too low
-        return 0
+            result = cv2.matchTemplate(cell_crop, t_resized, cv2.TM_CCOEFF_NORMED)
+            _, max_val, _, _ = cv2.minMaxLoc(result)
+            
+            if max_val > best_score:
+                best_score = max_val
+                best_id = candy_id
+                
+        if best_score >= config.TEMPLATE_MATCH_THRESHOLD:
+            return best_id
+
+    # Fallback to HSV color classification
+    return classify_cell_hsv(cell_img)
 
 def parse_board(frame: np.ndarray) -> np.ndarray:
     """
