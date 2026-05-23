@@ -22,6 +22,7 @@ function App() {
     board_w: 996,
     board_h: 996
   });
+  const [speedMode, setSpeedMode] = useState('fast');
 
   const socketRef = useRef(null);
   const consoleEndRef = useRef(null);
@@ -94,6 +95,9 @@ function App() {
               board_w: payload.config.board_w,
               board_h: payload.config.board_h
             });
+            if (payload.config.speed_mode) {
+              setSpeedMode(payload.config.speed_mode);
+            }
           }
           addLog(`[System] Device ready: ${payload.device_id} (${payload.resolution})`);
         } 
@@ -258,7 +262,8 @@ function App() {
           board_w: calib.board_w,
           board_h: calib.board_h,
           threshold: 0.70,
-          animation_settle: 800
+          animation_settle: 800,
+          speed_mode: speedMode
         })
       });
       const data = await response.json();
@@ -269,6 +274,36 @@ function App() {
       }
     } catch (e) {
       addLog(`[System Error] Failed to update backend config: ${e.message}`);
+    }
+  };
+
+  const handleSpeedChange = async (newSpeed) => {
+    setSpeedMode(newSpeed);
+    addLog(`[Client] Changing speed mode to ${newSpeed}...`);
+    
+    const localUrl = tunnelUrl.replace('ws://', 'http://').replace('wss://', 'https://').replace('/ws', '');
+    try {
+      const response = await fetch(`${localUrl}/api/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          board_x: calib.board_x,
+          board_y: calib.board_y,
+          board_w: calib.board_w,
+          board_h: calib.board_h,
+          threshold: 0.70,
+          animation_settle: 800,
+          speed_mode: newSpeed
+        })
+      });
+      const data = await response.json();
+      if (data.status === 'success') {
+        addLog(`[System] Speed mode changed to ${newSpeed} successfully.`);
+      } else {
+        addLog(`[System] Speed mode change failed: ${data.message}`);
+      }
+    } catch (e) {
+      addLog(`[System Error] Failed to change speed mode: ${e.message}`);
     }
   };
 
@@ -340,15 +375,39 @@ function App() {
               </span>
             </div>
             
-            <div className="control-grid">
+            <div className="control-grid" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <button 
                 className={`btn-ctrl ${botRunning ? 'pause' : 'start'}`}
                 onClick={toggleBot}
                 disabled={!isConnected}
-                style={{ gridColumn: 'span 2' }}
+                style={{ width: '100%', marginBottom: '0.25rem' }}
               >
                 {botRunning ? 'PAUSE BOT' : 'START AUTO-PLAY'}
               </button>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', width: '100%' }}>
+                <span className="stat-label" style={{ fontSize: '0.85rem' }}>Speed Mode:</span>
+                <select 
+                  value={speedMode} 
+                  onChange={(e) => handleSpeedChange(e.target.value)}
+                  disabled={!isConnected}
+                  style={{
+                    backgroundColor: '#1f2937',
+                    border: '1px solid #374151',
+                    color: '#f3f4f6',
+                    padding: '0.35rem 0.6rem',
+                    borderRadius: '6px',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    outline: 'none',
+                    flexGrow: 1,
+                    textAlign: 'right'
+                  }}
+                >
+                  <option value="normal">Normal (0.5-0.9s delay)</option>
+                  <option value="fast">Fast (0.15-0.3s delay)</option>
+                  <option value="insane">Insane (0.05-0.12s delay)</option>
+                </select>
+              </div>
             </div>
 
             <div className="stats-container">

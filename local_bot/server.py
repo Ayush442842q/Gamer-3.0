@@ -4,7 +4,7 @@ import json
 import logging
 import os
 import sys
-from typing import Set
+from typing import Set, Optional
 import cv2
 import numpy as np
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -77,6 +77,7 @@ class ConfigModel(BaseModel):
     board_h: int
     threshold: float
     animation_settle: int
+    speed_mode: Optional[str] = None
 
 @app.get("/api/status")
 async def get_status():
@@ -91,6 +92,7 @@ async def get_status():
             "board_h": config.BOARD_H,
             "threshold": config.TEMPLATE_MATCH_THRESHOLD,
             "animation_settle": config.ANIMATION_SETTLE_MS,
+            "speed_mode": config.SPEED_MODE,
         }
     }
 
@@ -102,12 +104,14 @@ async def update_config(cfg: ConfigModel):
     config.BOARD_H = cfg.board_h
     config.TEMPLATE_MATCH_THRESHOLD = cfg.threshold
     config.ANIMATION_SETTLE_MS = cfg.animation_settle
+    if cfg.speed_mode:
+        config.SPEED_MODE = cfg.speed_mode
     
     # Recalculate cell sizes
     config.CELL_W = config.BOARD_W // config.GRID_COLS
     config.CELL_H = config.BOARD_H // config.GRID_ROWS
     
-    logger.info(f"Config updated: Board rect ({config.BOARD_X}, {config.BOARD_Y}, {config.BOARD_W}, {config.BOARD_H})")
+    logger.info(f"Config updated: Board rect ({config.BOARD_X}, {config.BOARD_Y}, {config.BOARD_W}, {config.BOARD_H}), Speed: {config.SPEED_MODE}")
     return {"status": "success", "message": "Configuration updated successfully"}
 
 @app.post("/api/control")
@@ -283,7 +287,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 "board_x": config.BOARD_X,
                 "board_y": config.BOARD_Y,
                 "board_w": config.BOARD_W,
-                "board_h": config.BOARD_H
+                "board_h": config.BOARD_H,
+                "speed_mode": config.SPEED_MODE
             }
         }))
         
@@ -317,13 +322,9 @@ async def websocket_endpoint(websocket: WebSocket):
 # Start tasks on startup
 @app.on_event("startup")
 async def startup_event():
-    # Automatically calibrate grid boundaries on startup
-    try:
-        auto_calibrate.auto_calibrate_grid()
-    except Exception as e:
-        logger.error(f"Auto-calibration failed: {e}")
     # Load ngrok
     if config.NGROK_AUTHTOKEN:
+
         ngrok.set_auth_token(config.NGROK_AUTHTOKEN)
         
     try:
