@@ -169,20 +169,8 @@ async def bot_loop():
     
     while True:
         try:
-            # Grab frame and compress it to JPEG -> base64 for web streaming
+            # Grab initial frame
             frame = capture.grab_frame()
-            
-            # Encode frame to stream it (low resolution for streaming performance)
-            # Downscale frame for quick transmission
-            h, w, _ = frame.shape
-            scale_percent = 40  # Percent of original size
-            sw = int(w * scale_percent / 100)
-            sh = int(h * scale_percent / 100)
-            small_frame = cv2.resize(frame, (sw, sh), interpolation=cv2.INTER_AREA)
-            
-            # Encode to JPEG
-            _, buffer = cv2.imencode(".jpg", small_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
-            frame_b64 = base64.b64encode(buffer).decode("utf-8")
             
             # Get current game state
             game_state = state.detect_state(frame)
@@ -198,14 +186,11 @@ async def bot_loop():
             suggested_move = None
             
             if game_state == "PLAYING":
-                grid = classifier.parse_board(frame)
-                grid_list = grid.tolist()
-                
-                # If bot is active, calculate and execute move
                 if bot_running:
-                    # Let the board settle first
-                    settled_frame = capture.wait_for_board_settle()
-                    grid = classifier.parse_board(settled_frame)
+                    # Let the board settle first, reusing the initial frame to save time
+                    settled_frame = capture.wait_for_board_settle(prev_frame=frame)
+                    frame = settled_frame
+                    grid = classifier.parse_board(frame)
                     grid_list = grid.tolist()
                     
                     # Consciousness check: Did the last move fail to change the board?
@@ -246,12 +231,27 @@ async def bot_loop():
                             blacklisted_moves.clear()
                             logger.info("[*] Cleared blacklist since no other valid moves exist.")
                         await asyncio.sleep(1.0)
+                else:
+                    # Bot is paused, just parse the initial frame for streaming
+                    grid = classifier.parse_board(frame)
+                    grid_list = grid.tolist()
             elif bot_running:
                 # Handle non-playing states (popups, next levels, out of moves)
                 state.handle_non_playing_state(game_state, frame)
                 await asyncio.sleep(1.0)
 
-                
+            # Encode frame to stream it (low resolution for streaming performance)
+            # Downscale frame for quick transmission
+            h, w, _ = frame.shape
+            scale_percent = 40  # Percent of original size
+            sw = int(w * scale_percent / 100)
+            sh = int(h * scale_percent / 100)
+            small_frame = cv2.resize(frame, (sw, sh), interpolation=cv2.INTER_AREA)
+            
+            # Encode to JPEG
+            _, buffer = cv2.imencode(".jpg", small_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
+            frame_b64 = base64.b64encode(buffer).decode("utf-8")
+            
             # Broadcast frame and grid update to websocket clients
             await broadcast_message({
                 "type": "update",
@@ -263,7 +263,7 @@ async def bot_loop():
             })
             
             # Control loop frequency (if bot is paused, stream at ~2 FPS; if running, fast)
-            await asyncio.sleep(0.5 if not bot_running else 0.1)
+            await asyncio.sleep(0.5 if not bot_running else 0.05)
             
         except Exception as e:
             logger.error(f"Error in main bot loop: {e}")

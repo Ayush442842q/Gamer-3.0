@@ -28,7 +28,7 @@ def grab_frame() -> np.ndarray:
     except Exception as e:
         raise RuntimeError(f"Failed to decode image from ADB stdout: {e}")
 
-def wait_for_board_settle(threshold=None, wait_ms=150, max_attempts=15) -> np.ndarray:
+def wait_for_board_settle(prev_frame=None, threshold=None, wait_ms=150, max_attempts=15) -> np.ndarray:
     """
     Continually grabs screenshots of the board region and compares consecutive frames.
     Settle intervals dynamically adapt according to config.SPEED_MODE.
@@ -38,13 +38,14 @@ def wait_for_board_settle(threshold=None, wait_ms=150, max_attempts=15) -> np.nd
         
     # Scale checking speed based on performance profiles
     if config.SPEED_MODE == "insane":
-        wait_ms = 60
-        max_attempts = 25
+        wait_ms = 40
+        max_attempts = 20
     elif config.SPEED_MODE == "fast":
-        wait_ms = 100
-        max_attempts = 18
+        wait_ms = 80
+        max_attempts = 15
         
-    prev_frame = grab_frame()
+    if prev_frame is None:
+        prev_frame = grab_frame()
 
     
     bx, by, bw, bh = config.BOARD_X, config.BOARD_Y, config.BOARD_W, config.BOARD_H

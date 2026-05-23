@@ -18,8 +18,8 @@ def auto_calibrate_grid() -> bool:
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     
     # We examine a vertical strip in the middle of the screen (columns 400 to 680)
-    # starting at Y = 780 to ignore the top progress bar/lives overlay.
-    strip = hsv[780:2200, 400:680]
+    # starting at Y = 860 to ignore the top progress bar/lives overlay.
+    strip = hsv[860:2200, 400:680]
     
     # Calculate average saturation per row in the strip
     row_saturations = np.mean(strip[:, :, 1], axis=1)
@@ -31,7 +31,7 @@ def auto_calibrate_grid() -> bool:
         if sat > 85:
             # Verify it remains high for the next 150 pixels (indicating candy grid, not a transient text overlay)
             if y_idx + 150 < len(row_saturations) and np.mean(row_saturations[y_idx:y_idx+150]) > 80:
-                grid_start_y = 780 + y_idx
+                grid_start_y = 860 + y_idx
                 break
 
     if grid_start_y is None:
