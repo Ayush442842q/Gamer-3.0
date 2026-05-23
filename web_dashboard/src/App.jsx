@@ -439,9 +439,14 @@ function App() {
           <div className="dashboard-card animate-slide-in" style={{ animationDelay: '0.1s' }}>
             <div className="card-title">
               <span>Grid Calibration</span>
-              <button className="btn-connect" style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem' }} onClick={saveCalibration} disabled={!isConnected}>
-                Apply
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button className="btn-connect" style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem', backgroundColor: 'var(--accent-blue)', borderColor: 'var(--accent-blue)' }} onClick={() => sendCommand('calibrate')} disabled={!isConnected}>
+                  Auto Detect
+                </button>
+                <button className="btn-connect" style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem' }} onClick={saveCalibration} disabled={!isConnected}>
+                  Apply
+                </button>
+              </div>
             </div>
             
             <div className="calibration-inputs">

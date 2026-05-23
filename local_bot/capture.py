@@ -31,7 +31,7 @@ def grab_frame() -> np.ndarray:
 def wait_for_board_settle(prev_frame=None, threshold=None, wait_ms=150, max_attempts=15) -> np.ndarray:
     """
     Continually grabs screenshots of the board region and compares consecutive frames.
-    Settle intervals dynamically adapt according to config.SPEED_MODE.
+    Settle intervals dynamically adapt according to config.SPEED_MODE and config.ANIMATION_SETTLE_MS.
     """
     if threshold is None:
         threshold = config.ANIMATION_DIFF_THRESHOLD
@@ -39,10 +39,12 @@ def wait_for_board_settle(prev_frame=None, threshold=None, wait_ms=150, max_atte
     # Scale checking speed based on performance profiles
     if config.SPEED_MODE == "insane":
         wait_ms = 40
-        max_attempts = 20
     elif config.SPEED_MODE == "fast":
         wait_ms = 80
-        max_attempts = 15
+    else:
+        wait_ms = 150
+        
+    max_attempts = max(1, config.ANIMATION_SETTLE_MS // wait_ms)
         
     if prev_frame is None:
         prev_frame = grab_frame()

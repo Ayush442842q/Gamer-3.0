@@ -303,7 +303,7 @@ async def websocket_endpoint(websocket: WebSocket):
         }))
         
         while True:
-            # Listen to incoming web commands (Start / Pause / Custom Tap)
+            # Listen to incoming web commands (Start / Pause / Custom Tap / Calibrate)
             data = await websocket.receive_text()
             payload = json.loads(data)
             cmd = payload.get("command", "")
@@ -320,6 +320,29 @@ async def websocket_endpoint(websocket: WebSocket):
                 y = payload.get("y", 0)
                 logger.info(f"Remote tap requested at ({x}, {y})")
                 input.human_tap(x, y)
+            elif cmd == "calibrate":
+                logger.info("Auto-calibration requested from Web Dashboard")
+                try:
+                    calibrated = auto_calibrate.auto_calibrate_grid()
+                    if calibrated:
+                        logger.info(f"[+] Auto-calibration successful: BOARD_Y set to {config.BOARD_Y}")
+                        await websocket.send_text(json.dumps({
+                            "type": "init",
+                            "message": "Auto-calibration successful",
+                            "device_id": config.DEVICE_ID,
+                            "resolution": f"{config.SCREEN_WIDTH}x{config.SCREEN_HEIGHT}",
+                            "config": {
+                                "board_x": config.BOARD_X,
+                                "board_y": config.BOARD_Y,
+                                "board_w": config.BOARD_W,
+                                "board_h": config.BOARD_H,
+                                "speed_mode": config.SPEED_MODE
+                            }
+                        }))
+                    else:
+                        logger.warning("[-] Auto-calibration failed. Keeping existing coordinates.")
+                except Exception as e:
+                    logger.error(f"[-] Error running auto-calibration: {e}")
                 
     except WebSocketDisconnect:
         active_connections.remove(websocket)

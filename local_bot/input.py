@@ -23,9 +23,9 @@ def human_swipe(r1: int, c1: int, r2: int, c2: int):
     """
     Swipes from cell (r1, c1) to cell (r2, c2) with human-like features.
     Swipe duration and rest delays scale according to config.SPEED_MODE:
-    - insane: duration 50-90ms, rest 0.05-0.12s
-    - fast: duration 100-140ms, rest 0.15-0.3s
-    - normal: duration 150-250ms, rest 0.5-0.9s
+    - insane: duration 150-220ms, rest 0.35-0.45s
+    - fast: duration 220-280ms, rest 0.50-0.65s
+    - normal: duration 300-400ms, rest 0.80-1.20s
     """
     x1, y1 = cell_to_screen(r1, c1)
     x2, y2 = cell_to_screen(r2, c2)
@@ -39,14 +39,14 @@ def human_swipe(r1: int, c1: int, r2: int, c2: int):
     
     # Determine speed profile
     if config.SPEED_MODE == "insane":
-        duration_ms = random.randint(50, 90)
-        rest_time = random.uniform(0.05, 0.12)
+        duration_ms = random.randint(150, 220)
+        rest_time = random.uniform(0.35, 0.45)
     elif config.SPEED_MODE == "fast":
-        duration_ms = random.randint(100, 140)
-        rest_time = random.uniform(0.15, 0.3)
+        duration_ms = random.randint(220, 280)
+        rest_time = random.uniform(0.50, 0.65)
     else:
-        duration_ms = random.randint(150, 250)
-        rest_time = random.uniform(0.5, 0.9)
+        duration_ms = random.randint(300, 400)
+        rest_time = random.uniform(0.80, 1.20)
     
     cmd = get_adb_base_cmd() + [
         "shell", "input", "swipe",
@@ -67,26 +67,35 @@ def human_swipe(r1: int, c1: int, r2: int, c2: int):
 def human_tap(x: int, y: int):
     """
     Performs an ADB tap at (x, y) with coordinate jitter and speed-mode rest delay.
+    Uses input swipe with duration to ensure reliability on Motorola/fast devices.
     """
     jitter = 2 if config.SPEED_MODE in ["fast", "insane"] else 3
     x += random.randint(-jitter, jitter)
     y += random.randint(-jitter, jitter)
     
-    cmd = get_adb_base_cmd() + ["shell", "input", "tap", str(x), str(y)]
-    print(f"[*] Executing tap: ({x}, {y})")
+    # Determine tap duration and rest delay
+    if config.SPEED_MODE == "insane":
+        tap_duration = 100
+        rest_time = random.uniform(0.20, 0.35)
+    elif config.SPEED_MODE == "fast":
+        tap_duration = 150
+        rest_time = random.uniform(0.35, 0.50)
+    else:
+        tap_duration = 200
+        rest_time = random.uniform(0.60, 0.90)
+        
+    cmd = get_adb_base_cmd() + [
+        "shell", "input", "swipe",
+        str(x), str(y),
+        str(x), str(y),
+        str(tap_duration)
+    ]
+    print(f"[*] Executing tap (via swipe hold): ({x}, {y}) for {tap_duration}ms")
     
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         print(f"[!] ADB tap command failed: {result.stderr}")
         raise RuntimeError(f"ADB tap failed: {result.stderr}")
-        
-    # Scale tap rest delay
-    if config.SPEED_MODE == "insane":
-        rest_time = random.uniform(0.05, 0.12)
-    elif config.SPEED_MODE == "fast":
-        rest_time = random.uniform(0.15, 0.3)
-    else:
-        rest_time = random.uniform(0.3, 0.6)
         
     time.sleep(rest_time)
 
