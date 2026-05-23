@@ -17,6 +17,7 @@ import classifier
 import solver
 import input
 import state
+import auto_calibrate
 
 # Initialize FastAPI
 app = FastAPI(title="Candy Crush Bot Local API")
@@ -285,6 +286,11 @@ async def websocket_endpoint(websocket: WebSocket):
 # Start tasks on startup
 @app.on_event("startup")
 async def startup_event():
+    # Automatically calibrate grid boundaries on startup
+    try:
+        auto_calibrate.auto_calibrate_grid()
+    except Exception as e:
+        logger.error(f"Auto-calibration failed: {e}")
     # Load ngrok
     if config.NGROK_AUTHTOKEN:
         ngrok.set_auth_token(config.NGROK_AUTHTOKEN)
