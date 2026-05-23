@@ -1,15 +1,19 @@
 import numpy as np
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Set
 
 # Move format: (row1, col1, row2, col2)
 Move = Tuple[int, int, int, int]
 
-def find_best_move(grid: np.ndarray) -> Optional[Move]:
+def find_best_move(grid: np.ndarray, blacklist: Optional[Set[Move]] = None) -> Optional[Move]:
     """
     Evaluates all valid adjacent swaps on the 8x8 grid and returns the one
     that yields the highest score.
+    Skips any moves present in the blacklist.
     Returns None if no moves produce a match of 3 or more.
     """
+    if blacklist is None:
+        blacklist = set()
+        
     rows, cols = grid.shape
     best_move = None
     best_score = 0
@@ -23,19 +27,26 @@ def find_best_move(grid: np.ndarray) -> Optional[Move]:
                 
             # Try swap Right
             if c + 1 < cols and grid[r][c+1] != 0:
-                score = score_swap(grid, r, c, r, c+1)
-                if score > best_score:
-                    best_score = score
-                    best_move = (r, c, r, c+1)
+                m1 = (r, c, r, c+1)
+                m2 = (r, c+1, r, c)
+                if m1 not in blacklist and m2 not in blacklist:
+                    score = score_swap(grid, r, c, r, c+1)
+                    if score > best_score:
+                        best_score = score
+                        best_move = m1
                     
             # Try swap Down
             if r + 1 < rows and grid[r+1][c] != 0:
-                score = score_swap(grid, r, c, r+1, c)
-                if score > best_score:
-                    best_score = score
-                    best_move = (r, c, r+1, c)
+                m1 = (r, c, r+1, c)
+                m2 = (r+1, c, r, c)
+                if m1 not in blacklist and m2 not in blacklist:
+                    score = score_swap(grid, r, c, r+1, c)
+                    if score > best_score:
+                        best_score = score
+                        best_move = m1
                     
     return best_move
+
 
 def score_swap(grid: np.ndarray, r1: int, c1: int, r2: int, c2: int) -> int:
     """

@@ -157,6 +157,10 @@ async def bot_loop():
     global bot_running
     logger.info("Bot execution background loop started.")
     
+    blacklisted_moves = set()
+    last_grid = None
+    last_move = None
+    
     while True:
         try:
             # Grab frame and compress it to JPEG -> base64 for web streaming
@@ -177,6 +181,12 @@ async def bot_loop():
             # Get current game state
             game_state = state.detect_state(frame)
             
+            # Reset memory if bot is paused
+            if not bot_running:
+                blacklisted_moves.clear()
+                last_grid = None
+                last_move = None
+            
             # Parse grid if playing
             grid_list = []
             suggested_move = None
@@ -192,7 +202,17 @@ async def bot_loop():
                     grid = classifier.parse_board(settled_frame)
                     grid_list = grid.tolist()
                     
-                    move = solver.find_best_move(grid)
+                    # Consciousness check: Did the last move fail to change the board?
+                    if last_grid is not None and last_move is not None:
+                        if np.array_equal(grid, last_grid):
+                            blacklisted_moves.add(last_move)
+                            logger.warning(f"[!] Move {last_move} failed to update the board state. Blacklisting it and attempting the next best swap.")
+                        else:
+                            # Successful move! Clear the blacklist
+                            blacklisted_moves.clear()
+                    
+                    # Find best move excluding blacklisted moves
+                    move = solver.find_best_move(grid, blacklist=blacklisted_moves)
                     if move:
                         suggested_move = {
                             "r1": move[0], "c1": move[1],
@@ -208,14 +228,23 @@ async def bot_loop():
                         })
                         
                         logger.info(f"Optimal Move Found: ({move[0]}, {move[1]}) <-> ({move[2]}, {move[3]})")
+                        
+                        # Store current state for post-move comparison
+                        last_grid = grid.copy()
+                        last_move = move
+                        
                         input.human_swipe(move[0], move[1], move[2], move[3])
                     else:
                         logger.warning("No moves found. Waiting for board to shuffle/settle.")
+                        if blacklisted_moves:
+                            blacklisted_moves.clear()
+                            logger.info("[*] Cleared blacklist since no other valid moves exist.")
                         await asyncio.sleep(1.0)
             elif bot_running:
                 # Handle non-playing states (popups, next levels, out of moves)
                 state.handle_non_playing_state(game_state, frame)
                 await asyncio.sleep(1.0)
+
                 
             # Broadcast frame and grid update to websocket clients
             await broadcast_message({
