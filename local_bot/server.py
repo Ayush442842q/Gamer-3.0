@@ -169,8 +169,22 @@ async def bot_loop():
     
     while True:
         try:
-            # Grab initial frame
-            frame = capture.grab_frame()
+            # Grab initial frame with error handling for device disconnection
+            try:
+                frame = capture.grab_frame()
+            except Exception as adb_err:
+                logger.error(f"ADB Connection Error: {adb_err}")
+                await broadcast_message({
+                    "type": "update",
+                    "frame": None,
+                    "grid": [],
+                    "state": "DISCONNECTED",
+                    "bot_running": False,
+                    "suggested_move": None
+                })
+                bot_running = False
+                await asyncio.sleep(2.0)
+                continue
             
             # Get current game state
             game_state = state.detect_state(frame)

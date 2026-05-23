@@ -14,19 +14,32 @@ def get_adb_base_cmd():
 def grab_frame() -> np.ndarray:
     """
     Captures the phone screen using ADB and returns a BGR NumPy array (OpenCV format).
+    Retries up to 3 times in case of transient ADB or USB communication errors.
     """
     cmd = get_adb_base_cmd() + ["exec-out", "screencap", "-p"]
     
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if result.returncode != 0:
-        raise RuntimeError(f"ADB screencap failed: {result.stderr.decode('utf-8', errors='ignore')}")
-        
-    try:
-        # Load screen as RGB image, then convert to numpy BGR for OpenCV
-        img = Image.open(io.BytesIO(result.stdout)).convert("RGB")
-        return np.array(img)[:, :, ::-1]
-    except Exception as e:
-        raise RuntimeError(f"Failed to decode image from ADB stdout: {e}")
+    last_error = None
+    for attempt in range(3):
+        try:
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=5.0)
+            if result.returncode == 0 and len(result.stdout) > 0:
+                # Load screen as RGB image, then convert to numpy BGR for OpenCV
+                img = Image.open(io.BytesIO(result.stdout)).convert("RGB")
+                return np.array(img)[:, :, ::-1]
+            else:
+                err_msg = result.stderr.decode('utf-8', errors='ignore') if result.stderr else "Empty stdout buffer"
+                last_error = RuntimeError(f"ADB screencap failed: {err_msg}")
+        except subprocess.TimeoutExpired:
+            last_error = RuntimeError("ADB screencap command timed out (5s limit)")
+        except Exception as e:
+            last_error = e
+            
+        if attempt < 2:
+            # Short backoff sleep before retry
+            time.sleep(0.2)
+            
+    # If all attempts fail, raise the last encountered error
+    raise last_error if last_error else RuntimeError("Unknown error during grab_frame")
 
 def wait_for_board_settle(prev_frame=None, threshold=None, wait_ms=150, max_attempts=15) -> np.ndarray:
     """

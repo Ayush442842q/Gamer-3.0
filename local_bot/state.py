@@ -89,10 +89,12 @@ def handle_non_playing_state(state: str, frame: np.ndarray):
                 human_tap(click_x, click_y)
                 return
                 
-        # 2. Fallback to generic close coordinates for 1080x2400 (top-right close regions)
+        # 2. Fallback to generic close coordinates (top-right close regions)
         print("[*] No popup_close template matched. Trying typical popup close locations...")
-        # Candy Crush popups usually have a close 'X' at top-right
-        human_tap(950, 450)
+        # Candy Crush popups usually have a close 'X' at top-right (approx 88% width, 19% height)
+        click_x = int(config.SCREEN_WIDTH * 0.88)
+        click_y = int(config.SCREEN_HEIGHT * 0.19)
+        human_tap(click_x, click_y)
         
     elif state == "LEVEL_COMPLETE":
         if "level_complete" in STATE_TEMPLATES:
@@ -105,14 +107,18 @@ def handle_non_playing_state(state: str, frame: np.ndarray):
                 human_tap(max_loc[0] + tw // 2, max_loc[1] + th // 2)
                 return
                 
-        # Fallback typical Next button location at bottom center
+        # Fallback typical Next button location at bottom center (approx 50% width, 81% height)
         print("[*] Level complete fallback. Tapping Next Level button region...")
-        human_tap(540, 1950)  # Near bottom center for 1080x2400
+        click_x = int(config.SCREEN_WIDTH * 0.50)
+        click_y = int(config.SCREEN_HEIGHT * 0.81)
+        human_tap(click_x, click_y)
         
     elif state == "OUT_OF_MOVES":
-        # Fallback to tap exit/retry button (usually middle-bottom)
+        # Fallback to tap exit/retry button (usually middle-bottom, approx 50% width, 65% height)
         print("[!] Out of moves screen. Tapping exit/retry...")
-        human_tap(540, 1550)  # Adjust coordinate for 1080x2400
+        click_x = int(config.SCREEN_WIDTH * 0.50)
+        click_y = int(config.SCREEN_HEIGHT * 0.65)
+        human_tap(click_x, click_y)
         
     elif state == "LOADING":
         print("[*] Screen loading. Sleeping 2 seconds...")

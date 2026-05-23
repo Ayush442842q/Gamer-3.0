@@ -39,10 +39,10 @@ if SCREEN_WIDTH == 1080:
     
     # vertical position varies slightly depending on exact aspect ratio
     if SCREEN_HEIGHT >= 2340:
-        BOARD_Y = 918  # Typical top of board for tall screens
+        BOARD_Y = 860  # Typical top of board for tall screens
         BOARD_H = 996
     else:
-        BOARD_Y = 918  # Typical top of board for standard screens
+        BOARD_Y = 860  # Typical top of board for standard screens
         BOARD_H = 996
 
 else:

@@ -56,10 +56,10 @@ def auto_calibrate_grid() -> bool:
             
         # Replace the coordinates block
         import re
-        content = re.sub(r"BOARD_X = \d+", f"BOARD_X = {BOARD_X}", content)
-        content = re.sub(r"BOARD_Y = \d+", f"BOARD_Y = {BOARD_Y}", content)
-        content = re.sub(r"BOARD_W = \d+", f"BOARD_W = {BOARD_W}", content)
-        content = re.sub(r"BOARD_H = \d+", f"BOARD_H = {BOARD_H}", content)
+        content = re.sub(r"BOARD_X\s*=\s*\d+", f"BOARD_X = {BOARD_X}", content)
+        content = re.sub(r"BOARD_Y\s*=\s*\d+", f"BOARD_Y = {BOARD_Y}", content)
+        content = re.sub(r"BOARD_W\s*=\s*\d+", f"BOARD_W = {BOARD_W}", content)
+        content = re.sub(r"BOARD_H\s*=\s*\d+", f"BOARD_H = {BOARD_H}", content)
         
         with open(config_path, 'w') as file:
             file.write(content)
