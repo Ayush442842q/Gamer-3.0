@@ -5,11 +5,11 @@
   --font-mono: 'JetBrains Mono', monospace;
 
   /* Color Palette (Harmonious Dark Theme) */
-  --bg-primary: #0a0b0e;
-  --bg-secondary: #12141c;
-  --bg-tertiary: #191c26;
-  --border-color: #242936;
-  --border-focus: #3d465c;
+  --bg-primary: #08090c;
+  --bg-secondary: #0f111a;
+  --bg-tertiary: #161824;
+  --border-color: #1e2230;
+  --border-focus: #31384f;
   
   --text-primary: #f3f4f6;
   --text-secondary: #9ca3af;
@@ -30,14 +30,41 @@
 
   --accent-yellow: #f59e0b;
 
+  /* Theme Defaults (Fallback) */
+  --accent-theme: var(--accent-blue);
+  --accent-theme-glow: var(--accent-blue-glow);
+  --accent-theme-hover: #2563eb;
+  --accent-theme-secondary: var(--accent-purple);
+  --bg-glow-gradient: radial-gradient(circle at top right, rgba(59, 130, 246, 0.05), transparent 600px);
+  --card-glow-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+
   /* Glassmorphism details */
-  --glass-bg: rgba(18, 20, 28, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.05);
-  --glass-shadow: rgba(0, 0, 0, 0.3);
+  --glass-bg: rgba(15, 17, 26, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.03);
+  --glass-shadow: rgba(0, 0, 0, 0.4);
 
   /* Transitions */
   --transition-fast: 0.15s ease;
   --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Theme Configuration Overrides */
+.theme-candy-crush {
+  --accent-theme: #d946ef; /* Magenta Pink */
+  --accent-theme-glow: rgba(217, 70, 239, 0.15);
+  --accent-theme-hover: #c026d3;
+  --accent-theme-secondary: #8b5cf6; /* Violet */
+  --bg-glow-gradient: radial-gradient(circle at 80% 0%, rgba(217, 70, 239, 0.08), rgba(139, 92, 246, 0.03) 40%, transparent 70%);
+  --card-glow-shadow: 0 8px 30px -4px rgba(217, 70, 239, 0.08);
+}
+
+.theme-subway-surfers {
+  --accent-theme: #f59e0b; /* Cyber Orange/Amber */
+  --accent-theme-glow: rgba(245, 158, 11, 0.15);
+  --accent-theme-hover: #d97706;
+  --accent-theme-secondary: #10b981; /* Emerald Green */
+  --bg-glow-gradient: radial-gradient(circle at 80% 0%, rgba(245, 158, 11, 0.08), rgba(16, 185, 129, 0.03) 40%, transparent 70%);
+  --card-glow-shadow: 0 8px 30px -4px rgba(245, 158, 11, 0.08);
 }
 
 * {

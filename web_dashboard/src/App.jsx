@@ -53,6 +53,13 @@ function App() {
     return () => clearInterval(timer);
   }, [botRunning, stats.startTime]);
 
+  // Dynamic browser tab title
+  useEffect(() => {
+    document.title = activeGame === 'candy_crush' 
+      ? 'GAAMEER | Candy Crush Saga Bot' 
+      : 'GAAMEER | Subway Surfers Bot';
+  }, [activeGame]);
+
   const connectWebSocket = () => {
     if (isConnected) {
       disconnectWebSocket();
@@ -158,8 +165,11 @@ function App() {
 
   const handleGameChange = (newGame) => {
     setActiveGame(newGame);
-    addLog(`[Client] Switching game mode to ${newGame}...`);
-    sendCommand('select_game', { game: newGame });
+    const gameName = newGame === 'candy_crush' ? 'Candy Crush Saga' : 'Subway Surfers';
+    addLog(`[Client] Theme and mode set to ${gameName}.`);
+    if (isConnected) {
+      sendCommand('select_game', { game: newGame });
+    }
   };
 
   const addLog = (message) => {
@@ -198,7 +208,7 @@ function App() {
       const scaleX = canvas.width / 1080;
       const scaleY = canvas.height / 2400; // aspect ratio height config
       
-      ctx.strokeStyle = '#f59e0b'; // Amber yellow
+      ctx.strokeStyle = activeGame === 'candy_crush' ? '#d946ef' : '#f59e0b';
       ctx.lineWidth = 2;
       ctx.setLineDash([4, 4]);
       ctx.strokeRect(
@@ -209,7 +219,7 @@ function App() {
       );
       
       // Draw grid lines inside the boundary
-      ctx.strokeStyle = 'rgba(245, 158, 11, 0.2)';
+      ctx.strokeStyle = activeGame === 'candy_crush' ? 'rgba(217, 70, 239, 0.2)' : 'rgba(245, 158, 11, 0.2)';
       ctx.lineWidth = 1;
       ctx.setLineDash([]);
       
@@ -343,37 +353,37 @@ function App() {
   };
 
   return (
-    <div className="app-container">
+    <div className={`app-container theme-${activeGame === 'candy_crush' ? 'candy-crush' : 'subway-surfers'}`}>
       {/* Header Bar */}
       <header className="app-header">
         <div className="brand">
           <h1>GAAMEER</h1>
-          <span className="brand-badge">AUTO BOT v2.0</span>
+          <span className="brand-badge">
+            {activeGame === 'candy_crush' ? 'CANDY BOT v3.0' : 'RUNNER BOT v3.0'}
+          </span>
         </div>
         
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          {isConnected && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span className="stat-label" style={{ fontSize: '0.85rem' }}>Game:</span>
-              <select 
-                value={activeGame} 
-                onChange={(e) => handleGameChange(e.target.value)}
-                style={{
-                  backgroundColor: 'var(--bg-tertiary)',
-                  border: '1px solid var(--border-color)',
-                  color: 'var(--text-primary)',
-                  padding: '0.4rem 0.8rem',
-                  borderRadius: '6px',
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                  outline: 'none'
-                }}
-              >
-                <option value="candy_crush">Candy Crush Saga</option>
-                <option value="subway_surfers">Subway Surfers</option>
-              </select>
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span className="stat-label" style={{ fontSize: '0.85rem' }}>Game:</span>
+            <select 
+              value={activeGame} 
+              onChange={(e) => handleGameChange(e.target.value)}
+              style={{
+                backgroundColor: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)',
+                padding: '0.4rem 0.8rem',
+                borderRadius: '6px',
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                outline: 'none'
+              }}
+            >
+              <option value="candy_crush">Candy Crush Saga</option>
+              <option value="subway_surfers">Subway Surfers</option>
+            </select>
+          </div>
           
           <div className="connection-box">
             <input 
@@ -479,7 +489,7 @@ function App() {
             <div className="card-title">
               <span>Grid Calibration</span>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button className="btn-connect" style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem', backgroundColor: 'var(--accent-blue)', borderColor: 'var(--accent-blue)' }} onClick={() => sendCommand('calibrate')} disabled={!isConnected}>
+                <button className="btn-connect" style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem', backgroundColor: 'var(--accent-theme)', borderColor: 'var(--accent-theme)' }} onClick={() => sendCommand('calibrate')} disabled={!isConnected}>
                   Auto Detect
                 </button>
                 <button className="btn-connect" style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem' }} onClick={saveCalibration} disabled={!isConnected}>
@@ -564,7 +574,9 @@ function App() {
                   color: 'var(--text-muted)',
                   gap: '1rem',
                   padding: '2rem',
-                  textAlign: 'center'
+                  textAlign: 'center',
+                  border: '2px dashed var(--border-color)',
+                  borderRadius: '12px'
                 }}>
                   <div className="animate-pulse-slow" style={{ fontSize: '3rem' }}>📱</div>
                   <div>Awaiting frame stream...<br/>Please connect to the local server tunnel.</div>
@@ -582,35 +594,55 @@ function App() {
             
             <div className="board-grid-wrapper">
               {activeGame === 'subway_surfers' ? (
-                <div className="subway-road">
-                  {[0, 1, 2].map((laneIdx) => {
-                    const isOccupied = grid && grid[2] && grid[2][laneIdx] === 1;
-                    const hasPlayer = grid && grid[3] && grid[3][laneIdx] === 2;
-                    const density = grid && grid[0] ? grid[0][laneIdx] : 0;
-                    
-                    return (
-                      <div key={laneIdx} className={`subway-lane ${hasPlayer ? 'player-lane' : ''}`}>
-                        <div className="lane-header">
-                          {laneIdx === 0 ? 'Left Lane' : laneIdx === 1 ? 'Center Lane' : 'Right Lane'}
+                grid && grid.length > 0 ? (
+                  <div className="subway-road">
+                    {[0, 1, 2].map((laneIdx) => {
+                      const isOccupied = grid && grid[2] && grid[2][laneIdx] === 1;
+                      const hasPlayer = grid && grid[3] && grid[3][laneIdx] === 2;
+                      const density = grid && grid[0] ? grid[0][laneIdx] : 0;
+                      
+                      return (
+                        <div key={laneIdx} className={`subway-lane ${hasPlayer ? 'player-lane' : ''}`}>
+                          <div className="lane-header">
+                            {laneIdx === 0 ? 'Left' : laneIdx === 1 ? 'Center' : 'Right'}
+                          </div>
+                          <div className="lane-body">
+                            {isOccupied && (
+                              <div className="obstacle-box animate-pulse-slow">
+                                <span style={{ fontSize: '1.25rem' }}>⚠️</span>
+                                <span style={{ fontWeight: 'bold' }}>OBSTACLE</span>
+                                <span className="density-tag">Density: {density}%</span>
+                              </div>
+                            )}
+                            {hasPlayer && (
+                              <div className="player-icon">
+                                🏃‍♂️ RUNNER
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <div className="lane-body">
-                          {isOccupied && (
-                            <div className="obstacle-box animate-pulse-slow">
-                              <span style={{ fontSize: '1.25rem' }}>⚠️</span>
-                              <span style={{ fontWeight: 'bold' }}>OBSTACLE</span>
-                              <span className="density-tag">Density: {density}%</span>
-                            </div>
-                          )}
-                          {hasPlayer && (
-                            <div className="player-icon">
-                              🏃‍♂️ RUNNER
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div style={{
+                    height: '400px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    color: 'var(--text-muted)',
+                    gap: '1rem',
+                    textAlign: 'center',
+                    width: '100%',
+                    border: '2px dashed var(--border-color)',
+                    borderRadius: '12px',
+                    backgroundColor: 'var(--bg-tertiary)'
+                  }}>
+                    <div className="animate-pulse-slow" style={{ fontSize: '3rem' }}>🏃‍♂️</div>
+                    <div>Awaiting lane/track stream...<br/>Ensure bot is running and you are in a live run.</div>
+                  </div>
+                )
               ) : (
                 grid && grid.length > 0 ? (
                   <div className="candy-grid">
@@ -635,7 +667,11 @@ function App() {
                     alignItems: 'center',
                     color: 'var(--text-muted)',
                     gap: '1rem',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    width: '100%',
+                    border: '2px dashed var(--border-color)',
+                    borderRadius: '12px',
+                    backgroundColor: 'var(--bg-tertiary)'
                   }}>
                     <div className="animate-pulse-slow" style={{ fontSize: '3rem' }}>🍬</div>
                     <div>Awaiting grid data...<br/>Ensure bot is running and game is on a live level.</div>
