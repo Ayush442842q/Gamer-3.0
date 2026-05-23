@@ -367,3 +367,119 @@
 .calib-field input:focus {
   border-color: var(--accent-blue);
 }
+
+/* Subway Surfers 3-Lane Road Mirror styling */
+.subway-road {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  max-width: 520px;
+  width: 100%;
+  min-height: 400px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
+}
+
+.subway-lane {
+  background-color: rgba(18, 20, 28, 0.6);
+  border: 1px dashed rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 0.5rem;
+  transition: all var(--transition-normal);
+  position: relative;
+}
+
+.subway-lane.player-lane {
+  background-color: rgba(59, 130, 246, 0.05);
+  border: 1px solid var(--accent-blue);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.15);
+}
+
+.subway-lane::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.02) 50%, transparent 100%);
+  pointer-events: none;
+}
+
+.lane-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+.lane-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+  flex-grow: 1;
+  width: 100%;
+  padding-top: 1rem;
+}
+
+.obstacle-box {
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--accent-red);
+  color: var(--accent-red);
+  padding: 1rem 0.5rem;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}
+
+.density-tag {
+  background-color: rgba(0, 0, 0, 0.4);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.player-icon {
+  background-color: rgba(16, 185, 129, 0.15);
+  border: 1px solid var(--accent-green);
+  color: var(--accent-green);
+  font-weight: 800;
+  font-size: 0.85rem;
+  padding: 0.75rem 1rem;
+  border-radius: 50px;
+  text-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.25);
+  animation: runner-bounce 0.8s infinite alternate ease-in-out;
+}
+
+@keyframes runner-bounce {
+  from { transform: translateY(0); }
+  to { transform: translateY(-4px); }
+}

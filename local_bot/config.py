@@ -67,6 +67,9 @@ ANIMATION_DIFF_THRESHOLD = 50
 # Speed settings: "normal", "fast", "insane"
 SPEED_MODE = "fast"
 
+# Game selection: "candy_crush", "subway_surfers"
+ACTIVE_GAME = "candy_crush"
+
 # ngrok Auth Token configuration (optional, can be set via env var or ngrok config file)
 NGROK_AUTHTOKEN = os.environ.get("NGROK_AUTHTOKEN", "")
 

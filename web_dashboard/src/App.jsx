@@ -23,6 +23,7 @@ function App() {
     board_h: 996
   });
   const [speedMode, setSpeedMode] = useState('fast');
+  const [activeGame, setActiveGame] = useState('candy_crush');
 
   const socketRef = useRef(null);
   const consoleEndRef = useRef(null);
@@ -98,6 +99,9 @@ function App() {
             if (payload.config.speed_mode) {
               setSpeedMode(payload.config.speed_mode);
             }
+            if (payload.config.active_game) {
+              setActiveGame(payload.config.active_game);
+            }
           }
           addLog(`[System] Device ready: ${payload.device_id} (${payload.resolution})`);
         } 
@@ -150,6 +154,12 @@ function App() {
     if (socketRef.current) {
       socketRef.current.close();
     }
+  };
+
+  const handleGameChange = (newGame) => {
+    setActiveGame(newGame);
+    addLog(`[Client] Switching game mode to ${newGame}...`);
+    sendCommand('select_game', { game: newGame });
   };
 
   const addLog = (message) => {
@@ -263,7 +273,8 @@ function App() {
           board_h: calib.board_h,
           threshold: 0.70,
           animation_settle: 800,
-          speed_mode: speedMode
+          speed_mode: speedMode,
+          active_game: activeGame
         })
       });
       const data = await response.json();
@@ -293,7 +304,8 @@ function App() {
           board_h: calib.board_h,
           threshold: 0.70,
           animation_settle: 800,
-          speed_mode: newSpeed
+          speed_mode: newSpeed,
+          active_game: activeGame
         })
       });
       const data = await response.json();
@@ -336,24 +348,49 @@ function App() {
       <header className="app-header">
         <div className="brand">
           <h1>GAAMEER</h1>
-          <span className="brand-badge">CANDY BOT v1.0</span>
+          <span className="brand-badge">AUTO BOT v2.0</span>
         </div>
         
-        <div className="connection-box">
-          <input 
-            type="text" 
-            className="input-tunnel" 
-            placeholder="ws://localhost:8000/ws or wss://tunnel.ngrok..."
-            value={tunnelUrl}
-            onChange={(e) => setTunnelUrl(e.target.value)}
-            disabled={isConnected}
-          />
-          <button 
-            className={`btn-connect ${isConnected ? 'connected' : ''}`}
-            onClick={connectWebSocket}
-          >
-            {isConnected ? 'Disconnect' : 'Connect'}
-          </button>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          {isConnected && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span className="stat-label" style={{ fontSize: '0.85rem' }}>Game:</span>
+              <select 
+                value={activeGame} 
+                onChange={(e) => handleGameChange(e.target.value)}
+                style={{
+                  backgroundColor: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-primary)',
+                  padding: '0.4rem 0.8rem',
+                  borderRadius: '6px',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                <option value="candy_crush">Candy Crush Saga</option>
+                <option value="subway_surfers">Subway Surfers</option>
+              </select>
+            </div>
+          )}
+          
+          <div className="connection-box">
+            <input 
+              type="text" 
+              className="input-tunnel" 
+              placeholder="ws://localhost:8000/ws or wss://tunnel.ngrok..."
+              value={tunnelUrl}
+              onChange={(e) => setTunnelUrl(e.target.value)}
+              disabled={isConnected}
+            />
+            <button 
+              className={`btn-connect ${isConnected ? 'connected' : ''}`}
+              onClick={connectWebSocket}
+            >
+              {isConnected ? 'Disconnect' : 'Connect'}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -423,7 +460,9 @@ function App() {
                 <span className="stat-val">{stats.elapsed}</span>
               </div>
               <div className="stat-item">
-                <span className="stat-label">Swaps Executed</span>
+                <span className="stat-label">
+                  {activeGame === 'subway_surfers' ? 'Actions Logged' : 'Swaps Executed'}
+                </span>
                 <span className="stat-val">{stats.movesCount}</span>
               </div>
               <div className="stat-item">
@@ -542,34 +581,66 @@ function App() {
             </div>
             
             <div className="board-grid-wrapper">
-              {grid && grid.length > 0 ? (
-                <div className="candy-grid">
-                  {grid.map((row, rIdx) => 
-                    row.map((candyId, cIdx) => (
-                      <div 
-                        key={`${rIdx}-${cIdx}`}
-                        className={`candy-cell candy-${candyId} ${isCellInSwap(rIdx, cIdx) ? 'active-swap' : ''}`}
-                        title={`Pos: (${rIdx}, ${cIdx}) | Type: ${candyNames[candyId] || 'Unknown'}`}
-                      >
-                        {renderCandyIcon(candyId)}
+              {activeGame === 'subway_surfers' ? (
+                <div className="subway-road">
+                  {[0, 1, 2].map((laneIdx) => {
+                    const isOccupied = grid && grid[2] && grid[2][laneIdx] === 1;
+                    const hasPlayer = grid && grid[3] && grid[3][laneIdx] === 2;
+                    const density = grid && grid[0] ? grid[0][laneIdx] : 0;
+                    
+                    return (
+                      <div key={laneIdx} className={`subway-lane ${hasPlayer ? 'player-lane' : ''}`}>
+                        <div className="lane-header">
+                          {laneIdx === 0 ? 'Left Lane' : laneIdx === 1 ? 'Center Lane' : 'Right Lane'}
+                        </div>
+                        <div className="lane-body">
+                          {isOccupied && (
+                            <div className="obstacle-box animate-pulse-slow">
+                              <span style={{ fontSize: '1.25rem' }}>⚠️</span>
+                              <span style={{ fontWeight: 'bold' }}>OBSTACLE</span>
+                              <span className="density-tag">Density: {density}%</span>
+                            </div>
+                          )}
+                          {hasPlayer && (
+                            <div className="player-icon">
+                              🏃‍♂️ RUNNER
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    ))
-                  )}
+                    );
+                  })}
                 </div>
               ) : (
-                <div style={{
-                  height: '400px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  color: 'var(--text-muted)',
-                  gap: '1rem',
-                  textAlign: 'center'
-                }}>
-                  <div className="animate-pulse-slow" style={{ fontSize: '3rem' }}>🍬</div>
-                  <div>Awaiting grid data...<br/>Ensure bot is running and game is on a live level.</div>
-                </div>
+                grid && grid.length > 0 ? (
+                  <div className="candy-grid">
+                    {grid.map((row, rIdx) => 
+                      row.map((candyId, cIdx) => (
+                        <div 
+                          key={`${rIdx}-${cIdx}`}
+                          className={`candy-cell candy-${candyId} ${isCellInSwap(rIdx, cIdx) ? 'active-swap' : ''}`}
+                          title={`Pos: (${rIdx}, ${cIdx}) | Type: ${candyNames[candyId] || 'Unknown'}`}
+                        >
+                          {renderCandyIcon(candyId)}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                ) : (
+                  <div style={{
+                    height: '400px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    color: 'var(--text-muted)',
+                    gap: '1rem',
+                    textAlign: 'center'
+                  }}>
+                    <div className="animate-pulse-slow" style={{ fontSize: '3rem' }}>🍬</div>
+                    <div>Awaiting grid data...<br/>Ensure bot is running and game is on a live level.</div>
+                  </div>
+                )
               )}
             </div>
             
@@ -585,7 +656,11 @@ function App() {
                 fontSize: '0.875rem'
               }}>
                 <span style={{ color: 'var(--accent-purple)', fontWeight: 'bold' }}>⭐ Next Action:</span>
-                <span>Swap ({suggestedMove.r1}, {suggestedMove.c1}) with ({suggestedMove.r2}, {suggestedMove.c2})</span>
+                {activeGame === 'subway_surfers' ? (
+                  <span>Swipe {suggestedMove.direction.toUpperCase()} to dodge obstacle</span>
+                ) : (
+                  <span>Swap ({suggestedMove.r1}, {suggestedMove.c1}) with ({suggestedMove.r2}, {suggestedMove.c2})</span>
+                )}
               </div>
             )}
           </div>

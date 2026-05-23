@@ -20,6 +20,7 @@ import solver
 import input
 import state
 import auto_calibrate
+import games
 
 # Initialize FastAPI
 app = FastAPI(title="Candy Crush Bot Local API")
@@ -37,6 +38,7 @@ app.add_middleware(
 active_connections: Set[WebSocket] = set()
 bot_running = False
 log_queue = asyncio.Queue()
+active_game = None
 
 # Custom Log Handler to stream logs to web socket
 class WebSocketLogHandler(logging.Handler):
@@ -78,6 +80,7 @@ class ConfigModel(BaseModel):
     threshold: float
     animation_settle: int
     speed_mode: Optional[str] = None
+    active_game: Optional[str] = None
 
 @app.get("/api/status")
 async def get_status():
@@ -93,11 +96,13 @@ async def get_status():
             "threshold": config.TEMPLATE_MATCH_THRESHOLD,
             "animation_settle": config.ANIMATION_SETTLE_MS,
             "speed_mode": config.SPEED_MODE,
+            "active_game": config.ACTIVE_GAME
         }
     }
 
 @app.post("/api/config")
 async def update_config(cfg: ConfigModel):
+    global active_game
     config.BOARD_X = cfg.board_x
     config.BOARD_Y = cfg.board_y
     config.BOARD_W = cfg.board_w
@@ -106,12 +111,17 @@ async def update_config(cfg: ConfigModel):
     config.ANIMATION_SETTLE_MS = cfg.animation_settle
     if cfg.speed_mode:
         config.SPEED_MODE = cfg.speed_mode
+    if cfg.active_game:
+        if config.ACTIVE_GAME != cfg.active_game:
+            config.ACTIVE_GAME = cfg.active_game
+            active_game = games.get_game_instance(cfg.active_game)
+            logger.info(f"Active game updated dynamically to: {cfg.active_game}")
     
     # Recalculate cell sizes
     config.CELL_W = config.BOARD_W // config.GRID_COLS
     config.CELL_H = config.BOARD_H // config.GRID_ROWS
     
-    logger.info(f"Config updated: Board rect ({config.BOARD_X}, {config.BOARD_Y}, {config.BOARD_W}, {config.BOARD_H}), Speed: {config.SPEED_MODE}")
+    logger.info(f"Config updated: Board rect ({config.BOARD_X}, {config.BOARD_Y}, {config.BOARD_W}, {config.BOARD_H}), Speed: {config.SPEED_MODE}, Game: {config.ACTIVE_GAME}")
     return {"status": "success", "message": "Configuration updated successfully"}
 
 @app.post("/api/control")
@@ -160,12 +170,11 @@ async def ws_log_broadcaster():
 
 # Background Bot Loop
 async def bot_loop():
-    global bot_running
+    global bot_running, active_game
     logger.info("Bot execution background loop started.")
     
-    blacklisted_moves = set()
-    last_grid = None
-    last_move = None
+    # Initialize game instance based on config
+    active_game = games.get_game_instance(config.ACTIVE_GAME)
     
     while True:
         try:
@@ -186,81 +195,24 @@ async def bot_loop():
                 await asyncio.sleep(2.0)
                 continue
             
-            # Get current game state
-            game_state = state.detect_state(frame)
+            # Delegate state analysis and actions to the active game class
+            result = await active_game.process_frame(frame, bot_running)
             
-            # Reset memory if bot is paused
-            if not bot_running:
-                blacklisted_moves.clear()
-                last_grid = None
-                last_move = None
+            grid_list = result.get("grid", [])
+            suggested_move = result.get("suggested_move", None)
+            game_state = result.get("state", "PLAYING")
+            bot_running = result.get("bot_running", bot_running)
             
-            # Parse grid if playing
-            grid_list = []
-            suggested_move = None
-            
-            if game_state == "PLAYING":
-                if bot_running:
-                    # Let the board settle first, reusing the initial frame to save time
-                    settled_frame = capture.wait_for_board_settle(prev_frame=frame)
-                    frame = settled_frame
-                    grid = classifier.parse_board(frame)
-                    grid_list = grid.tolist()
-                    
-                    # Consciousness check: Did the last move fail to change the board?
-                    if last_grid is not None and last_move is not None:
-                        if np.array_equal(grid, last_grid):
-                            blacklisted_moves.add(last_move)
-                            logger.warning(f"[!] Move {last_move} failed to update the board state. Blacklisting it and attempting the next best swap.")
-                        else:
-                            # Successful move! Clear the blacklist
-                            blacklisted_moves.clear()
-                    
-                    # Find best move excluding blacklisted moves
-                    move = solver.find_best_move(grid, blacklist=blacklisted_moves)
-                    if move:
-                        suggested_move = {
-                            "r1": move[0], "c1": move[1],
-                            "r2": move[2], "c2": move[3]
-                        }
-                        
-                        await broadcast_message({
-                            "type": "status",
-                            "state": game_state,
-                            "bot_running": bot_running,
-                            "suggested_move": suggested_move,
-                            "grid": grid_list
-                        })
-                        
-                        logger.info(f"Optimal Move Found: ({move[0]}, {move[1]}) <-> ({move[2]}, {move[3]})")
-                        
-                        # Store current state for post-move comparison
-                        last_grid = grid.copy()
-                        last_move = move
-                        
-                        input.human_swipe(move[0], move[1], move[2], move[3])
-                    else:
-                        logger.warning("No moves found. Waiting for board to shuffle/settle.")
-                        if blacklisted_moves:
-                            blacklisted_moves.clear()
-                            logger.info("[*] Cleared blacklist since no other valid moves exist.")
-                        await asyncio.sleep(1.0)
-                else:
-                    # Bot is paused, just parse the initial frame for streaming
-                    grid = classifier.parse_board(frame)
-                    grid_list = grid.tolist()
-            elif bot_running:
-                # Handle non-playing states (popups, next levels, out of moves)
-                state.handle_non_playing_state(game_state, frame)
-                await asyncio.sleep(1.0)
+            # Use post-processed/post-settle frame if returned
+            final_frame = result.get("frame", frame)
 
             # Encode frame to stream it (low resolution for streaming performance)
             # Downscale frame for quick transmission
-            h, w, _ = frame.shape
+            h, w, _ = final_frame.shape
             scale_percent = 40  # Percent of original size
             sw = int(w * scale_percent / 100)
             sh = int(h * scale_percent / 100)
-            small_frame = cv2.resize(frame, (sw, sh), interpolation=cv2.INTER_AREA)
+            small_frame = cv2.resize(final_frame, (sw, sh), interpolation=cv2.INTER_AREA)
             
             # Encode to JPEG
             _, buffer = cv2.imencode(".jpg", small_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
@@ -290,15 +242,16 @@ async def websocket_endpoint(websocket: WebSocket):
     active_connections.add(websocket)
     logger.info(f"Client connected. Active websockets: {len(active_connections)}")
     
-    # Run auto-calibration on connection to match the game grid dynamically
-    try:
-        calibrated = auto_calibrate.auto_calibrate_grid()
-        if calibrated:
-            logger.info(f"[+] Dynamic calibration successful: BOARD_Y set to {config.BOARD_Y}")
-        else:
-            logger.warning(f"[-] Dynamic calibration failed. Using existing coordinate configuration.")
-    except Exception as e:
-        logger.error(f"[-] Error running dynamic calibration on connection: {e}")
+    # Run auto-calibration on connection only for Candy Crush
+    if config.ACTIVE_GAME == "candy_crush":
+        try:
+            calibrated = auto_calibrate.auto_calibrate_grid()
+            if calibrated:
+                logger.info(f"[+] Dynamic calibration successful: BOARD_Y set to {config.BOARD_Y}")
+            else:
+                logger.warning(f"[-] Dynamic calibration failed. Using existing coordinate configuration.")
+        except Exception as e:
+            logger.error(f"[-] Error running dynamic calibration on connection: {e}")
         
     # Send initial config and connection success
     try:
@@ -312,17 +265,18 @@ async def websocket_endpoint(websocket: WebSocket):
                 "board_y": config.BOARD_Y,
                 "board_w": config.BOARD_W,
                 "board_h": config.BOARD_H,
-                "speed_mode": config.SPEED_MODE
+                "speed_mode": config.SPEED_MODE,
+                "active_game": config.ACTIVE_GAME
             }
         }))
         
         while True:
-            # Listen to incoming web commands (Start / Pause / Custom Tap / Calibrate)
+            # Listen to incoming web commands (Start / Pause / Custom Tap / Calibrate / Select Game)
             data = await websocket.receive_text()
             payload = json.loads(data)
             cmd = payload.get("command", "")
             
-            global bot_running
+            global bot_running, active_game
             if cmd == "start":
                 bot_running = True
                 logger.info("Bot started from Web Dashboard")
@@ -334,6 +288,27 @@ async def websocket_endpoint(websocket: WebSocket):
                 y = payload.get("y", 0)
                 logger.info(f"Remote tap requested at ({x}, {y})")
                 input.human_tap(x, y)
+            elif cmd == "select_game":
+                game_name = payload.get("game", "candy_crush")
+                logger.info(f"Switching active game to: {game_name}")
+                if config.ACTIVE_GAME != game_name:
+                    config.ACTIVE_GAME = game_name
+                    active_game = games.get_game_instance(game_name)
+                # Send confirmation init back
+                await websocket.send_text(json.dumps({
+                    "type": "init",
+                    "message": f"Switched game to {game_name}",
+                    "device_id": config.DEVICE_ID,
+                    "resolution": f"{config.SCREEN_WIDTH}x{config.SCREEN_HEIGHT}",
+                    "config": {
+                        "board_x": config.BOARD_X,
+                        "board_y": config.BOARD_Y,
+                        "board_w": config.BOARD_W,
+                        "board_h": config.BOARD_H,
+                        "speed_mode": config.SPEED_MODE,
+                        "active_game": config.ACTIVE_GAME
+                    }
+                }))
             elif cmd == "calibrate":
                 logger.info("Auto-calibration requested from Web Dashboard")
                 try:
@@ -350,7 +325,8 @@ async def websocket_endpoint(websocket: WebSocket):
                                 "board_y": config.BOARD_Y,
                                 "board_w": config.BOARD_W,
                                 "board_h": config.BOARD_H,
-                                "speed_mode": config.SPEED_MODE
+                                "speed_mode": config.SPEED_MODE,
+                                "active_game": config.ACTIVE_GAME
                             }
                         }))
                     else:
