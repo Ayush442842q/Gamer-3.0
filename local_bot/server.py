@@ -276,6 +276,16 @@ async def websocket_endpoint(websocket: WebSocket):
     active_connections.add(websocket)
     logger.info(f"Client connected. Active websockets: {len(active_connections)}")
     
+    # Run auto-calibration on connection to match the game grid dynamically
+    try:
+        calibrated = auto_calibrate.auto_calibrate_grid()
+        if calibrated:
+            logger.info(f"[+] Dynamic calibration successful: BOARD_Y set to {config.BOARD_Y}")
+        else:
+            logger.warning(f"[-] Dynamic calibration failed. Using existing coordinate configuration.")
+    except Exception as e:
+        logger.error(f"[-] Error running dynamic calibration on connection: {e}")
+        
     # Send initial config and connection success
     try:
         await websocket.send_text(json.dumps({

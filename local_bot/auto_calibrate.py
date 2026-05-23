@@ -4,13 +4,13 @@ import os
 import capture
 import config
 
-def auto_calibrate_grid():
+def auto_calibrate_grid() -> bool:
     print("[*] Grabbing frame for auto-calibration...")
     try:
         frame = capture.grab_frame()
     except Exception as e:
         print(f"[!] FAILED to grab frame: {e}")
-        return
+        return False
         
     h, w, _ = frame.shape
     
@@ -34,10 +34,9 @@ def auto_calibrate_grid():
                 grid_start_y = 780 + y_idx
                 break
 
-                
     if grid_start_y is None:
-        print("[!] Auto-calibration could not find high-saturation candy boundaries. Falling back to default Y=1360.")
-        grid_start_y = 1360
+        print("[!] Auto-calibration could not find high-saturation candy boundaries. Keeping existing coordinate configs.")
+        return False
     else:
         print(f"[+] AUTO-CALIBRATION SUCCESS: Detected candy grid starting at Y = {grid_start_y}px")
         
@@ -74,9 +73,10 @@ def auto_calibrate_grid():
         config.BOARD_H = BOARD_H
         config.CELL_W = BOARD_W // config.GRID_COLS
         config.CELL_H = BOARD_H // config.GRID_ROWS
-        
+        return True
     else:
         print("[!] config.py not found to update.")
+        return False
 
 if __name__ == "__main__":
     auto_calibrate_grid()
