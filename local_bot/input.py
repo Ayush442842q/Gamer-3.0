@@ -39,8 +39,8 @@ def human_swipe(r1: int, c1: int, r2: int, c2: int):
     
     # Determine speed profile
     if config.SPEED_MODE == "insane":
-        duration_ms = random.randint(50, 70)
-        rest_time = random.uniform(0.02, 0.05)
+        duration_ms = random.randint(50, 90)
+        rest_time = random.uniform(0.05, 0.12)
     elif config.SPEED_MODE == "fast":
         duration_ms = random.randint(100, 140)
         rest_time = random.uniform(0.15, 0.3)
@@ -82,7 +82,7 @@ def human_tap(x: int, y: int):
         
     # Scale tap rest delay
     if config.SPEED_MODE == "insane":
-        rest_time = random.uniform(0.02, 0.05)
+        rest_time = random.uniform(0.05, 0.12)
     elif config.SPEED_MODE == "fast":
         rest_time = random.uniform(0.15, 0.3)
     else:
