@@ -18,11 +18,10 @@ def auto_calibrate_grid():
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     
     # We examine a vertical strip in the middle of the screen (columns 400 to 680)
-    # to find the transition from the cloud background to the candy grid.
-    strip = hsv[500:2200, 400:680]
+    # starting at Y = 780 to ignore the top progress bar/lives overlay.
+    strip = hsv[780:2200, 400:680]
     
     # Calculate average saturation per row in the strip
-    # Saturation is channel 1
     row_saturations = np.mean(strip[:, :, 1], axis=1)
     
     # The candy grid starts where saturation consistently rises above 80
@@ -30,10 +29,11 @@ def auto_calibrate_grid():
     for y_idx, sat in enumerate(row_saturations):
         # We look for a region of at least 80 pixels wide that has high saturation
         if sat > 85:
-            # Verify it remains high for the next 150 pixels (indicating candy grid, not a popup text)
+            # Verify it remains high for the next 150 pixels (indicating candy grid, not a transient text overlay)
             if y_idx + 150 < len(row_saturations) and np.mean(row_saturations[y_idx:y_idx+150]) > 80:
-                grid_start_y = 500 + y_idx
+                grid_start_y = 780 + y_idx
                 break
+
                 
     if grid_start_y is None:
         print("[!] Auto-calibration could not find high-saturation candy boundaries. Falling back to default Y=1360.")

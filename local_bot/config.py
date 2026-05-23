@@ -44,6 +44,7 @@ if SCREEN_WIDTH == 1080:
     else:
         BOARD_Y = 882  # Typical top of board for standard screens
         BOARD_H = 996
+
 else:
     # General scaling fallback
     BOARD_X = int(SCREEN_WIDTH * 0.04)
