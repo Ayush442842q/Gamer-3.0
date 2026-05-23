@@ -39,10 +39,10 @@ if SCREEN_WIDTH == 1080:
     
     # vertical position varies slightly depending on exact aspect ratio
     if SCREEN_HEIGHT >= 2340:
-        BOARD_Y = 820  # Typical top of board for tall screens
+        BOARD_Y = 882  # Typical top of board for tall screens
         BOARD_H = 996
     else:
-        BOARD_Y = 650  # Typical top of board for standard screens
+        BOARD_Y = 882  # Typical top of board for standard screens
         BOARD_H = 996
 else:
     # General scaling fallback
@@ -63,5 +63,9 @@ TEMPLATE_MATCH_THRESHOLD = 0.70
 ANIMATION_SETTLE_MS = 800
 ANIMATION_DIFF_THRESHOLD = 50
 
+# Speed settings: "normal", "fast", "insane"
+SPEED_MODE = "fast"
+
 # ngrok Auth Token configuration (optional, can be set via env var or ngrok config file)
 NGROK_AUTHTOKEN = os.environ.get("NGROK_AUTHTOKEN", "")
+

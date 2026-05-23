@@ -21,22 +21,32 @@ def get_adb_base_cmd():
 
 def human_swipe(r1: int, c1: int, r2: int, c2: int):
     """
-    Swipes from cell (r1, c1) to cell (r2, c2) with human-like features:
-    - Adds random coordinate jitter of +/- 4 pixels
-    - Uses a randomized swipe duration (140ms to 240ms)
-    - Adds a randomized post-move sleep delay (0.5s to 0.9s)
+    Swipes from cell (r1, c1) to cell (r2, c2) with human-like features.
+    Swipe duration and rest delays scale according to config.SPEED_MODE:
+    - insane: duration 50-90ms, rest 0.05-0.12s
+    - fast: duration 100-140ms, rest 0.15-0.3s
+    - normal: duration 150-250ms, rest 0.5-0.9s
     """
     x1, y1 = cell_to_screen(r1, c1)
     x2, y2 = cell_to_screen(r2, c2)
     
-    # Add human-like coordinate jitter
-    x1 += random.randint(-4, 4)
-    y1 += random.randint(-4, 4)
-    x2 += random.randint(-4, 4)
-    y2 += random.randint(-4, 4)
+    # Add coordinate jitter (tighter on insane/fast modes)
+    jitter = 2 if config.SPEED_MODE in ["fast", "insane"] else 4
+    x1 += random.randint(-jitter, jitter)
+    y1 += random.randint(-jitter, jitter)
+    x2 += random.randint(-jitter, jitter)
+    y2 += random.randint(-jitter, jitter)
     
-    # Randomize swipe speed (duration in milliseconds)
-    duration_ms = random.randint(140, 240)
+    # Determine speed profile
+    if config.SPEED_MODE == "insane":
+        duration_ms = random.randint(50, 90)
+        rest_time = random.uniform(0.05, 0.12)
+    elif config.SPEED_MODE == "fast":
+        duration_ms = random.randint(100, 140)
+        rest_time = random.uniform(0.15, 0.3)
+    else:
+        duration_ms = random.randint(150, 250)
+        rest_time = random.uniform(0.5, 0.9)
     
     cmd = get_adb_base_cmd() + [
         "shell", "input", "swipe",
@@ -52,17 +62,15 @@ def human_swipe(r1: int, c1: int, r2: int, c2: int):
         print(f"[!] ADB swipe command failed: {result.stderr}")
         raise RuntimeError(f"ADB swipe failed: {result.stderr}")
         
-    # Post-swipe rest to let cascades start and simulate human look-around
-    rest_time = random.uniform(0.5, 0.9)
     time.sleep(rest_time)
 
 def human_tap(x: int, y: int):
     """
-    Performs an ADB tap at (x, y) with human-like coordinate jitter and post-tap delay.
+    Performs an ADB tap at (x, y) with coordinate jitter and speed-mode rest delay.
     """
-    # Jitter
-    x += random.randint(-3, 3)
-    y += random.randint(-3, 3)
+    jitter = 2 if config.SPEED_MODE in ["fast", "insane"] else 3
+    x += random.randint(-jitter, jitter)
+    y += random.randint(-jitter, jitter)
     
     cmd = get_adb_base_cmd() + ["shell", "input", "tap", str(x), str(y)]
     print(f"[*] Executing tap: ({x}, {y})")
@@ -72,4 +80,13 @@ def human_tap(x: int, y: int):
         print(f"[!] ADB tap command failed: {result.stderr}")
         raise RuntimeError(f"ADB tap failed: {result.stderr}")
         
-    time.sleep(random.uniform(0.3, 0.6))
+    # Scale tap rest delay
+    if config.SPEED_MODE == "insane":
+        rest_time = random.uniform(0.05, 0.12)
+    elif config.SPEED_MODE == "fast":
+        rest_time = random.uniform(0.15, 0.3)
+    else:
+        rest_time = random.uniform(0.3, 0.6)
+        
+    time.sleep(rest_time)
+

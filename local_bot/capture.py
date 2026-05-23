@@ -31,13 +31,21 @@ def grab_frame() -> np.ndarray:
 def wait_for_board_settle(threshold=None, wait_ms=150, max_attempts=15) -> np.ndarray:
     """
     Continually grabs screenshots of the board region and compares consecutive frames.
-    Returns the frame once the pixel difference falls below the threshold, indicating
-    that candy falling and score cascade animations have finished.
+    Settle intervals dynamically adapt according to config.SPEED_MODE.
     """
     if threshold is None:
         threshold = config.ANIMATION_DIFF_THRESHOLD
         
+    # Scale checking speed based on performance profiles
+    if config.SPEED_MODE == "insane":
+        wait_ms = 60
+        max_attempts = 25
+    elif config.SPEED_MODE == "fast":
+        wait_ms = 100
+        max_attempts = 18
+        
     prev_frame = grab_frame()
+
     
     bx, by, bw, bh = config.BOARD_X, config.BOARD_Y, config.BOARD_W, config.BOARD_H
     # Safety checks for frame bounds
