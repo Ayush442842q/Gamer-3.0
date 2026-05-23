@@ -50,8 +50,9 @@ def score_swap(grid: np.ndarray, r1: int, c1: int, r2: int, c2: int) -> int:
     # Detect matches
     matched, matches_list = detect_matches(temp_grid)
     
-    if not matched:
+    if not np.any(matched):
         return 0
+
         
     score = 0
     
