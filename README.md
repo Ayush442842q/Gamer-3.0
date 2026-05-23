@@ -9,11 +9,11 @@ With Gaaameer, you can control, calibrate, and watch the bot play the official C
 ## 🚀 Key Features
 
 * **Real-time Mirroring**: Streams your phone screen at low latency directly onto the web dashboard canvas.
-* **Auto-Calibration**: Highlights the game board on the screen. Drag sliders on the dashboard to align the coordinates dynamically.
+* **Auto-Calibration**: Highlights the game board on the screen. Click **Auto Detect** to dynamically scan the screen and align coordinates automatically, or adjust sliders manually.
 * **OpenCV Classification**: Uses multi-template matching to classify standard candies and identify special types (Striped, Wrapped, Color Bombs).
 * **Simulated Move Solver**: Uses a greedy look-ahead simulation that evaluates all 112 adjacent swaps, scoring them by match sizes, cascading chains, and special combo priorities.
 * **Automated secure Tunneling**: Integrates `pyngrok` in the backend. When launched, it automatically establishes a secure tunnel and prints your `wss://` WebSocket URL.
-* **Human-like Swiping**: Generates random coordinate jitter (±4px), varies swipe speeds (140ms–240ms), and applies natural pauses to simulate human play.
+* **Human-like Swiping & Tapping**: Generates random coordinate jitter (±4px), uses swipe-based touch holds (100ms–200ms) to ensure clicks register reliably on Motorola/fast devices, and applies slower, device-compatible swipe speeds (150ms–400ms) to avoid input dropping.
 * **Remote Gestures**: Click anywhere on the dashboard's mirror canvas to send manual touch coordinates back to the phone screen.
 
 ---
@@ -96,8 +96,8 @@ With Gaaameer, you can control, calibrate, and watch the bot play the official C
 ### Step 3: Run the Bot
 1. Open your Vercel URL in a web browser.
 2. Enter the backend's `wss://` URL into the Connection bar in the top-right header and click **Connect**.
-3. Launch Candy Crush Saga on your phone.
-4. On the dashboard, adjust the **Grid Calibration** sliders to align the Amber box exactly with the edges of the candy grid on your screen. Click **Apply**.
+3. Launch Candy Crush Saga on your phone and enter a level.
+4. On the dashboard's **Grid Calibration** panel, click **Auto Detect** to automatically align the board boundary using dynamic color calibration, or adjust the sliders manually and click **Apply**.
 5. Click **START AUTO-PLAY** and watch the bot play autonomously!
 
 ---
