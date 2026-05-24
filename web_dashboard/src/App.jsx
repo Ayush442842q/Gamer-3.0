@@ -24,8 +24,24 @@ function App() {
   });
   const [speedMode, setSpeedMode] = useState('fast');
   const [activeGame, setActiveGame] = useState('candy_crush');
+  const [view, setView] = useState('hub');
 
   const socketRef = useRef(null);
+
+  const launchGame = (gameId) => {
+    setActiveGame(gameId);
+    setView('dashboard');
+    // If connected, sync the active game immediately to the backend
+    if (isConnected && socketRef.current) {
+      socketRef.current.send(JSON.stringify({ command: 'select_game', game: gameId }));
+    }
+  };
+
+  const backToHub = () => {
+    setView('hub');
+    setGrid([]);
+    setSuggestedMove(null);
+  };
   const consoleEndRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -55,10 +71,14 @@ function App() {
 
   // Dynamic browser tab title
   useEffect(() => {
-    document.title = activeGame === 'candy_crush' 
-      ? 'GAAMEER | Candy Crush Saga Bot' 
-      : 'GAAMEER | Subway Surfers Bot';
-  }, [activeGame]);
+    if (view === 'hub') {
+      document.title = 'GAAMEER | Game Hub';
+    } else {
+      document.title = activeGame === 'candy_crush' 
+        ? 'GAAMEER | Candy Crush Saga Bot' 
+        : 'GAAMEER | Subway Surfers Bot';
+    }
+  }, [activeGame, view]);
 
   const connectWebSocket = () => {
     if (isConnected) {
@@ -352,11 +372,81 @@ function App() {
     6: "Purple", 7: "Striped H", 8: "Striped V", 9: "Wrapped", 10: "Color Bomb"
   };
 
+  if (view === 'hub') {
+    return (
+      <div className="app-container theme-hub">
+        <div className="hub-container">
+          <header className="hub-header">
+            <h1>GAAMEER</h1>
+            <p className="hub-subtitle">
+              Sleek AI & Vision Game Automation Hub. Pick an active automation module below to connect and control your connected Android device.
+            </p>
+          </header>
+
+          <div className="hub-cards-grid">
+            {/* Candy Crush Card */}
+            <div className="hub-card candy-crush-card animate-slide-in" style={{ animationDelay: '0.1s' }}>
+              <div className="hub-card-icon">🍬</div>
+              <h2 className="hub-card-title">Candy Crush Saga</h2>
+              <p className="hub-card-desc">
+                High-fidelity 8x8 grid state classifier, match detector, and reinforcement action solver. Automates match-3 gameplay utilizing precise ADB swipe gestures.
+              </p>
+              <div className="hub-card-tags">
+                <span className="hub-card-tag">Vision Classification</span>
+                <span className="hub-card-tag">8x8 Solver</span>
+                <span className="hub-card-tag">State Machine</span>
+              </div>
+              <button className="btn-hub-launch" onClick={() => launchGame('candy_crush')}>
+                LAUNCH BOT
+              </button>
+            </div>
+
+            {/* Subway Surfers Card */}
+            <div className="hub-card subway-surfers-card animate-slide-in" style={{ animationDelay: '0.2s' }}>
+              <div className="hub-card-icon">🏃‍♂️</div>
+              <h2 className="hub-card-title">Subway Surfers</h2>
+              <p className="hub-card-desc">
+                High-speed Canny edge density vision lane occupancy scanner and instant non-blocking swipe dodge system. Runs under low-latency ADB execution pipes.
+              </p>
+              <div className="hub-card-tags">
+                <span className="hub-card-tag">Lane Density Edge</span>
+                <span className="hub-card-tag">Dodge Logic</span>
+                <span className="hub-card-tag">Asynchronous ADB</span>
+              </div>
+              <button className="btn-hub-launch" onClick={() => launchGame('subway_surfers')}>
+                LAUNCH BOT
+              </button>
+            </div>
+
+            {/* Coming Soon Card */}
+            <div className="hub-card disabled-card animate-slide-in" style={{ animationDelay: '0.3s' }}>
+              <div className="hub-card-icon">🎮</div>
+              <h2 className="hub-card-title">More Modules</h2>
+              <p className="hub-card-desc">
+                New game modules (e.g. Temple Run, Flappy Bird, and clickers) are currently under development. AI modules and CV models will be added soon.
+              </p>
+              <div className="hub-card-tags">
+                <span className="hub-card-tag">Future Module</span>
+                <span className="hub-card-tag">CV Classifier</span>
+              </div>
+              <button className="btn-hub-launch" disabled style={{ opacity: 0.5 }}>
+                COMING SOON
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`app-container theme-${activeGame === 'candy_crush' ? 'candy-crush' : 'subway-surfers'}`}>
       {/* Header Bar */}
       <header className="app-header">
         <div className="brand">
+          <button className="btn-back-hub" onClick={backToHub} style={{ marginRight: '0.5rem' }}>
+            ← Back
+          </button>
           <h1>GAAMEER</h1>
           <span className="brand-badge">
             {activeGame === 'candy_crush' ? 'CANDY BOT v3.0' : 'RUNNER BOT v3.0'}
@@ -364,27 +454,6 @@ function App() {
         </div>
         
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span className="stat-label" style={{ fontSize: '0.85rem' }}>Game:</span>
-            <select 
-              value={activeGame} 
-              onChange={(e) => handleGameChange(e.target.value)}
-              style={{
-                backgroundColor: 'var(--bg-tertiary)',
-                border: '1px solid var(--border-color)',
-                color: 'var(--text-primary)',
-                padding: '0.4rem 0.8rem',
-                borderRadius: '6px',
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                outline: 'none'
-              }}
-            >
-              <option value="candy_crush">Candy Crush Saga</option>
-              <option value="subway_surfers">Subway Surfers</option>
-            </select>
-          </div>
-          
           <div className="connection-box">
             <input 
               type="text" 
